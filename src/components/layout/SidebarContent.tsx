@@ -1,15 +1,18 @@
-import ProjectList from "@/components/projects/ProjectList";
+import type { ReactNode } from "react";
 
 export default function SidebarContent({
   onNewProject,
   onOpenSettings,
   showCloseButton = false,
   onClose,
+  history,
 }: {
   onNewProject: () => void;
   onOpenSettings: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
+  /** The project history block (list, loading, empty or error state). */
+  history?: ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col gap-5 p-4">
@@ -75,13 +78,13 @@ export default function SidebarContent({
         <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
           Projects
         </p>
-        <ProjectList />
+        {history && <div className="max-h-56 overflow-y-auto">{history}</div>}
       </div>
 
       <div className="mt-auto space-y-2 border-t border-line pt-3">
         <p className="text-[11px] leading-relaxed text-zinc-500">
-          Local-only foundation. Nothing you type leaves this browser tab, and
-          nothing is stored on disk yet.
+          Local-only foundation. Projects are saved in this browser via
+          IndexedDB; nothing you type leaves your device.
         </p>
         <button
           type="button"

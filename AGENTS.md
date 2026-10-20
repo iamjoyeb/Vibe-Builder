@@ -18,7 +18,7 @@ Vibe Builder is a **browser-first, chat-driven workspace**: the owner describes 
 
 - **Stack:** Next.js 16 (App Router, Turbopack), React 19, TypeScript (strict), Tailwind CSS v4, npm.
 - **Build target:** static export (`output: "export"` in `next.config.ts`) → static site in `out/`. Deployable to any static host.
-- **Current status:** foundation shell (Task 002). Chat input, preview and settings are honest UI placeholders — AI calls, storage, GitHub and the preview engine are **not implemented**. Never present them as working.
+- **Current status:** foundation shell + local persistence (Tasks 002–003). Chat input, preview and settings are honest UI placeholders; projects and user prompts persist via IndexedDB. AI calls, GitHub and the preview engine are **not implemented**. Never present them as working.
 
 ## Commands
 
@@ -49,7 +49,7 @@ Reserved for future tasks — **create each module only when implementing it**. 
 | --- | --- | --- |
 | `src/lib/agent/` | Prompt → plan → code-generation orchestration | Owns the pipeline; hands structured jobs to providers |
 | `src/lib/providers/` | AI provider adapters (OpenAI, Anthropic, Google AI, OpenRouter) | Client-side `fetch` only; one file per provider; keys supplied by the user at runtime |
-| `src/lib/storage/` | IndexedDB project persistence | Browser-only; access `indexedDB`/`window` inside effects/handlers, never at module top level |
+| `src/lib/storage/projects.ts` | **Implemented (Task 003).** IndexedDB persistence for projects and user messages | Browser-only: no `window`/`indexedDB` access at import time or during SSR; one cached connection; no secrets ever |
 | `src/lib/github/` | GitHub REST integration (repos, branches, commits) | Client-side; per-session token supplied by the user |
 | `src/lib/preview/` | Sandboxed iframe rendering of generated code | Owns the `sandbox` attribute allow-list; never render generated code into the app DOM |
 
@@ -64,6 +64,16 @@ Reserved for future tasks — **create each module only when implementing it**. 
 7. **Honesty over demo value.** Never fake a working AI reply, GitHub commit, saved project, or preview. If a feature is not implemented, the UI must say so clearly (see the amber "not configured yet" notice and the Preview panel placeholder).
 8. **Do not overclaim.** Do not state that generated npm projects can run in the browser until a real execution strategy is designed and approved.
 9. **Inspect before changing.** Read the surrounding files before editing; keep changes incremental and explainable to a beginner; report real command output and results, never claimed success.
+
+## Local storage schema (IndexedDB)
+
+- Database: **`vibe-builder`**, schema **version 1**, opened by `src/lib/storage/projects.ts` with a single cached connection.
+- Store **`projects`** — keyPath `id`; index `updatedAt` (rec-id: `Project`: `{ id, name, createdAt, updatedAt }`).
+- Store **`messages`** — keyPath `id`; compound index **`project_order`** on `["projectId", "createdAt"]` (`ProjectMessage`: `{ id, projectId, role, content, createdAt }`).
+- Timestamps are ISO 8601 strings (`new Date().toISOString()`), sortable lexically.
+- Only **`role: "user"`** records are written today; `"assistant"` is reserved for real agent replies. System notices, loading states and error messages are session-only and must never be stored as messages.
+- A future schema **version 2** will add a **`files`** store for `ProjectFile` records (reserved in `src/types/index.ts`); bump `DB_VERSION` and add the store inside `onupgradeneeded` when that lands.
+- Deleting a project always deletes its messages in the same transaction. Never store API keys, tokens, or any secret here.
 
 ## Working notes
 

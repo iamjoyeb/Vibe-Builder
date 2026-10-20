@@ -24,9 +24,23 @@ function UserBubble({ message }: { message: ChatMessage }) {
   );
 }
 
+const NOTICE_TONE = {
+  info: {
+    wrap: "border-amber-400/25 bg-amber-400/[0.07]",
+    title: "text-amber-300/90",
+    body: "text-amber-100/90",
+  },
+  error: {
+    wrap: "border-rose-400/30 bg-rose-400/[0.08]",
+    title: "text-rose-300/90",
+    body: "text-rose-100/90",
+  },
+} as const;
+
 function NoticeBubble({ notice }: { notice: ChatNotice }) {
+  const tone = NOTICE_TONE[notice.tone ?? "info"];
   return (
-    <li className="rise-in flex gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3">
+    <li className={`rise-in flex gap-3 rounded-2xl border px-4 py-3 ${tone.wrap}`}>
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"
@@ -34,16 +48,25 @@ function NoticeBubble({ notice }: { notice: ChatNotice }) {
         stroke="currentColor"
         strokeWidth={1.8}
         strokeLinecap="round"
-        className="mt-0.5 size-4 shrink-0 text-amber-300"
+        className={`mt-0.5 size-4 shrink-0 ${notice.tone === "error" ? "text-rose-300" : "text-amber-300"}`}
       >
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 8v.5M12 11.5V16" />
+        {notice.tone === "error" ? (
+          <>
+            <path d="M12 4 21 19H3l9-15Z" />
+            <path d="M12 10v4M12 16.5v.5" />
+          </>
+        ) : (
+          <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v.5M12 11.5V16" />
+          </>
+        )}
       </svg>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-amber-300/90">
+        <p className={`text-xs font-semibold uppercase tracking-wide ${tone.title}`}>
           Vibe Builder
         </p>
-        <p className="mt-1 text-sm leading-relaxed text-amber-100/90">
+        <p className={`mt-1 text-sm leading-relaxed ${tone.body}`}>
           {notice.content}
         </p>
       </div>
@@ -53,14 +76,20 @@ function NoticeBubble({ notice }: { notice: ChatNotice }) {
 
 export default function ChatPanel({
   messages,
+  messagesStatus = "ready",
+  isSending = false,
   onSend,
 }: {
   messages: ChatItem[];
-  onSend: (text: string) => void;
+  messagesStatus?: "loading" | "ready" | "error";
+  isSending?: boolean;
+  onSend: (text: string) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // Guards Enter and the Send button firing twice for one draft.
+  const pendingRef = useRef(false);
 
   // Keep the newest message in view once the conversation grows.
   useEffect(() => {
@@ -75,11 +104,19 @@ export default function ChatPanel({
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [draft]);
 
-  const submitDraft = () => {
+  const submitDraft = async () => {
+    if (pendingRef.current || isSending) return;
     const text = draft.trim();
     if (!text) return;
-    onSend(text);
-    setDraft("");
+    pendingRef.current = true;
+    try {
+      // The draft is only cleared once the message is actually persisted,
+      // so a failed save never loses the user's input.
+      const saved = await onSend(text);
+      if (saved) setDraft("");
+    } finally {
+      pendingRef.current = false;
+    }
     inputRef.current?.focus();
   };
 
@@ -91,11 +128,22 @@ export default function ChatPanel({
         className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6"
       >
         <div className="mx-auto w-full max-w-2xl py-6">
-          {messages.length === 0 ? (
-            <ChatEmptyState onPick={(prompt) => {
-              setDraft(prompt);
-              inputRef.current?.focus();
-            }} />
+          {messagesStatus === "loading" ? (
+            <p className="py-10 text-center text-sm text-zinc-500">
+              Loading conversation…
+            </p>
+          ) : messagesStatus === "error" ? (
+            <p className="py-10 text-center text-sm text-rose-300/90">
+              Could not load this conversation. Pick another project or refresh
+              the page to try again.
+            </p>
+          ) : messages.length === 0 ? (
+            <ChatEmptyState
+              onPick={(prompt) => {
+                setDraft(prompt);
+                inputRef.current?.focus();
+              }}
+            />
           ) : (
             <ol className="space-y-4">
               {messages.map((item) =>
@@ -113,7 +161,7 @@ export default function ChatPanel({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          submitDraft();
+          void submitDraft();
         }}
         noValidate
         className="border-t border-line bg-zinc-950/70 px-3 py-3 backdrop-blur sm:px-6 sm:py-4"
@@ -127,7 +175,7 @@ export default function ChatPanel({
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
-                  submitDraft();
+                  void submitDraft();
                 }
               }}
               rows={1}
@@ -137,8 +185,9 @@ export default function ChatPanel({
             />
             <button
               type="submit"
-              disabled={!draft.trim()}
+              disabled={!draft.trim() || isSending}
               aria-label="Send prompt"
+              title={isSending ? "Saving to your browser…" : "Send prompt"}
               className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-white transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <svg

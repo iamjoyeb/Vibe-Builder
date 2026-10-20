@@ -3,11 +3,14 @@ export default function ProjectStatus({
   onPreviewToggle,
   onOpenMenu,
   onOpenSettings,
+  projectName = null,
 }: {
   previewOpen: boolean;
   onPreviewToggle: () => void;
   onOpenMenu: () => void;
   onOpenSettings: () => void;
+  /** Name of the selected project, when one is selected. */
+  projectName?: string | null;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-3 py-2 sm:px-4">
@@ -42,8 +45,13 @@ export default function ProjectStatus({
           Status:
         </span>
         <span className="truncate">
-          Application shell only — AI agent, storage and preview are not wired
-          up yet.
+          {projectName ? (
+            <span className="font-medium text-zinc-300">
+              {projectName}
+              {" — "}
+            </span>
+          ) : null}
+          AI agent, storage and preview are not wired up yet.
         </span>
       </div>
 

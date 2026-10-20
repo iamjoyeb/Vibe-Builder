@@ -2,7 +2,7 @@
 
 A browser-first AI workspace: describe the website or web app you want, and an AI agent builds it with you — chat first, sandboxed preview, projects saved locally, zero backend.
 
-> **Status:** foundation shell (Task 002). The interface works; the AI agent, project persistence, GitHub integration and the preview engine are upcoming tasks and appear as honest placeholders in the UI. Architecture and security rules live in [`AGENTS.md`](./AGENTS.md).
+> **Status:** foundation shell + local persistence (Tasks 002–003). The interface works; projects and prompts are saved locally in your browser via IndexedDB (schema in [`AGENTS.md`](./AGENTS.md)), while the AI agent, GitHub integration and the preview engine are upcoming tasks and appear as honest placeholders in the UI.
 
 ## Stack
 

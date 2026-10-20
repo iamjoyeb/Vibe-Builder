@@ -2,7 +2,7 @@ import StarterPrompts from "@/components/chat/StarterPrompts";
 
 const CAPABILITY_CHIPS: { label: string; planned?: boolean }[] = [
   { label: "Browser-first — no backend" },
-  { label: "Local projects", planned: true },
+  { label: "Projects saved in your browser" },
   { label: "Sandboxed previews", planned: true },
 ];
 
@@ -38,9 +38,9 @@ export default function ChatEmptyState({
       </h1>
       <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400 sm:text-base">
         Vibe Builder is a chat-first workspace for creating sites and web apps.
-        Type an idea below to try the interface — the AI agent, project storage
-        and sandboxed preview arrive in upcoming tasks, so for now your prompt
-        stays in this tab only.
+        Type an idea below — prompts and projects are saved locally in your
+        browser, while the AI agent, code generation and sandboxed preview
+        arrive in upcoming tasks.
       </p>
 
       <ul className="mt-5 flex flex-wrap gap-2">
